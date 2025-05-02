@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>台鐵車站隨機抽選器</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Noto Sans TC", sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+      }
+
+      body {
+        background: linear-gradient(to bottom, #00529b, #005baa, #0068b7);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        color: white;
+        font-family: "Noto Sans TC", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        text-align: center;
+        padding: 50px 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+      }
+
+      h1 {
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        color: #ffffff;
+      }
+
+      .station-picker {
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 20px;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .station-result {
+        font-size: 36px;
+        font-weight: 700;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+
+      .draw-btn {
+        background-color: #ff7900;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 15px 60px;
+        font-size: 28px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .draw-btn:hover {
+        background-color: #ff9126;
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .draw-btn:active {
+        transform: scale(0.98);
+      }
+
+      .draw-animation {
+        animation: draw 0.5s ease;
+      }
+
+      @keyframes draw {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      /* 添加抽獎動畫 */
+      .drawing {
+        position: relative;
+      }
+
+      .drawing::after {
+        content: "";
+        position: absolute;
+        bottom: -5px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          rgba(147, 200, 74, 0) 0%,
+          rgba(147, 200, 74, 1) 50%,
+          rgba(147, 200, 74, 0) 100%
+        );
+        animation: loading 1.5s infinite;
+      }
+
+      @keyframes loading {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      .station-list {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 10px;
+      }
+
+      .station-list::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .station-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+
+      .station-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+      }
+
+      .station-item {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+      }
+
+      .station-item.highlighted {
+        background-color: #ff7900;
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(255, 121, 0, 0.5);
+      }
+
+      .toggle-list-btn {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 20px;
+      }
+
+      .toggle-list-btn:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .station-list-container {
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s ease;
+      }
+
+      .station-list-container.show {
+        max-height: 600px;
+      }
+
+      .history {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+
+      .history-item {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+
+      .draw-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: scale(1);
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 32px;
+        }
+
+        .station-result {
+          font-size: 30px;
+        }
+
+        .draw-btn {
+          font-size: 24px;
+          padding: 12px 40px;
+        }
+
+        .station-list {
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>台鐵車站隨機抽選器</h1>
+
+      <div class="station-picker">
+        <div class="station-result" id="stationResult">
+          點擊下方按鈕開始抽選
+        </div>
+        <button class="draw-btn" id="drawBtn">抽一個車站</button>
+
+        <div class="history" id="history"></div>
+
+        <button class="toggle-list-btn" id="toggleListBtn">
+          顯示所有車站列表
+        </button>
+        <div class="station-list-container" id="stationListContainer">
+          <div class="station-list" id="stationList"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 臺灣鐵路管理局的 239 個車站列表
+      const trainStations = [
+        "基隆",
+        "三坑",
+        "八堵",
+        "七堵",
+        "百福",
+        "五堵",
+        "汐止",
+        "汐科",
+        "南港",
+        "松山",
+        "臺北",
+        "萬華",
+        "板橋",
+        "浮洲",
+        "樹林",
+        "南樹林",
+        "山佳",
+        "鶯歌",
+        "桃園",
+        "內壢",
+        "中壢",
+        "埔心",
+        "楊梅",
+        "富岡",
+        "新富",
+        "北湖",
+        "湖口",
+        "新豐",
+        "竹北",
+        "北新竹",
+        "新竹",
+        "香山",
+        "崎頂",
+        "竹南",
+        "褒忠",
+        "通霄",
+        "苗栗",
+        "豐富",
+        "后里",
+        "豐原",
+        "泰安",
+        "大甲",
+        "清水",
+        "沙鹿",
+        "臺中港",
+        "臺中",
+        "成功",
+        "大慶",
+        "烏日",
+        "新烏日",
+        "彰化",
+        "花壇",
+        "大村",
+        "員林",
+        "永靖",
+        "社頭",
+        "田中",
+        "二水",
+        "林內",
+        "斗六",
+        "石榴",
+        "大林",
+        "民雄",
+        "嘉義",
+        "水上",
+        "南靖",
+        "後壁",
+        "新營",
+        "林鳳營",
+        "隆田",
+        "善化",
+        "新市",
+        "永康",
+        "大橋",
+        "臺南",
+        "保安",
+        "仁德",
+        "大湖",
+        "路竹",
+        "湖內",
+        "鳳山",
+        "高雄",
+        "新左營",
+        "楠梓",
+        "橋頭",
+        "岡山",
+        "彌陀",
+        "永安",
+        "新市區",
+        "銅鑼",
+        "內灣",
+        "賽夏",
+        "南靖鄉",
+        "東竹",
+        "水清沙",
+        "太魯閣",
+        "花蓮",
+        "玉里",
+        "富里",
+        "永興",
+        "瑞穗",
+        "三民",
+        "玉山",
+        "新城",
+        "北埔",
+        "和平",
+        "和仁",
+        "漢本",
+        "武塔",
+        "南澳",
+        "東澳",
+        "冬山",
+        "羅東",
+        "宜蘭",
+        "頭城",
+        "外澳",
+        "龜山",
+        "大溪",
+        "貢寮",
+        "福隆",
+        "石城",
+        "礁溪",
+        "四城",
+        "新馬",
+        "南平",
+        "東里",
+        "富里",
+        "德鹿谷",
+        "赤科山",
+        "石梯坪",
+        "崁腳",
+        "和平橋",
+        "壽豐",
+        "豐田",
+        "志學",
+        "吉安",
+        "太魯閣",
+        "美崙",
+        "花蓮",
+        "林田山",
+        "光復",
+        "萬榮",
+        "馬太鞍",
+        "大富",
+        "池上",
+        "關山",
+        "瑞源",
+        "鹿野",
+        "山里",
+        "臺東",
+        "知本",
+        "太麻里",
+        "金崙",
+        "志航",
+        "達仁",
+        "龍田",
+        "古莊",
+        "竹崎",
+        "阿里山",
+        "奮起湖",
+        "油羅溪",
+        "神木",
+        "二萬坪",
+        "深林",
+        "塔山",
+        "崇德",
+        "清水斷崖",
+        "太魯閣國家公園站",
+        "銅門",
+        "嶺頂",
+        "田埔",
+        "永安",
+        "中山",
+        "南勢角",
+        "中壢航空城",
+        "沙崙",
+        "平溪",
+        "菁桐",
+        "十分",
+        "嶺腳",
+        "大華",
+        "瑞芳",
+        "和平山",
+        "猴硐",
+        "雙溪",
+        "貢寮",
+        "牡丹",
+        "海科館",
+        "深澳",
+        "八斗子",
+        "高鐵桃園站",
+        "高鐵新竹站",
+        "高鐵苗栗站",
+        "高鐵彰化站",
+        "高鐵雲林站",
+        "高鐵嘉義站",
+        "高鐵台南站",
+        "高鐵左營站",
+        "森林火車站",
+        "車埕",
+        "集集",
+        "二水",
+        "水里",
+        "濁水",
+        "魚池",
+        "鳳林",
+        "尾崁",
+        "三貂嶺",
+        "田中北站",
+        "平溪村",
+        "九份",
+        "十八尖山",
+        "新月",
+        "茶山站",
+        "八田與一紀念站",
+        "美濃",
+        "阿里山車站",
+        "神木車站",
+        "奮起湖車站",
+        "北埔車站",
+        "花蓮港車站",
+        "花東新城車站",
+        "林榮車站",
+        "大武車站",
+        "金峰車站",
+        "新化車站",
+        "內城車站",
+        "濁水車站",
+        "龍泉車站",
+        "石城車站",
+        "富岡車站",
+        "八里車站",
+        "白沙灣車站",
+        "三義車站",
+        "石岡車站",
+        "大肚車站",
+        "彰濱車站",
+        "埔里車站",
+        "深澳車站",
+      ];
+
+      // 歷史紀錄
+      let history = [];
+
+      // DOM元素
+      const drawBtn = document.getElementById("drawBtn");
+      const stationResult = document.getElementById("stationResult");
+      const stationList = document.getElementById("stationList");
+      const toggleListBtn = document.getElementById("toggleListBtn");
+      const stationListContainer = document.getElementById(
+        "stationListContainer"
+      );
+      const historyContainer = document.getElementById("history");
+
+      // 隨機抽選車站
+      function drawRandomStation() {
+        // 禁用按鈕，避免重複點擊
+        drawBtn.disabled = true;
+
+        // 添加抽獎中的樣式
+        stationResult.classList.add("drawing");
+
+        // 設置當前顯示為"抽選中..."
+        stationResult.textContent = "抽選中...";
+
+        // 快速輪流顯示隨機車站名
+        let shuffleCount = 0;
+        const maxShuffles = 20; // 總共顯示20次隨機車站
+        let shuffleSpeed = 80; // 初始速度
+
+        const shuffleInterval = setInterval(() => {
+          // 隨機選擇一個車站顯示
+          const randomIndex = Math.floor(Math.random() * trainStations.length);
+          stationResult.textContent = trainStations[randomIndex];
+
+          shuffleCount++;
+
+          // 隨著接近結束，減慢速度
+          if (shuffleCount > maxShuffles * 0.6) {
+            shuffleSpeed += 15;
+          }
+
+          // 結束輪換
+          if (shuffleCount >= maxShuffles) {
+            clearInterval(shuffleInterval);
+
+            // 選擇最終結果
+            const finalIndex = Math.floor(Math.random() * trainStations.length);
+            const selectedStation = trainStations[finalIndex];
+
+            // 添加最後的動畫效果
+            setTimeout(() => {
+              // 移除抽獎中樣式
+              stationResult.classList.remove("drawing");
+
+              // 顯示最終結果
+              stationResult.textContent = selectedStation;
+              stationResult.classList.add("draw-animation");
+
+              // 更新歷史紀錄
+              addToHistory(selectedStation);
+
+              // 高亮顯示被選中的車站
+              highlightSelectedStation(selectedStation);
+
+              // 恢復按鈕可用狀態
+              drawBtn.disabled = false;
+
+              setTimeout(() => {
+                stationResult.classList.remove("draw-animation");
+              }, 500);
+            }, 300);
+          }
+        }, shuffleSpeed);
+      }
+
+      // 添加到歷史紀錄
+      function addToHistory(station) {
+        // 限制歷史紀錄最多10個
+        if (history.length >= 10) {
+          history.shift();
+        }
+
+        history.push(station);
+        updateHistoryDisplay();
+      }
+
+      // 更新歷史紀錄顯示
+      function updateHistoryDisplay() {
+        historyContainer.innerHTML = "";
+
+        if (history.length > 0) {
+          const historyTitle = document.createElement("div");
+          historyTitle.textContent = "最近抽出：";
+          historyTitle.style.width = "100%";
+          historyTitle.style.marginBottom = "5px";
+          historyContainer.appendChild(historyTitle);
+
+          history
+            .slice()
+            .reverse()
+            .forEach((station) => {
+              const historyItem = document.createElement("div");
+              historyItem.className = "history-item";
+              historyItem.textContent = station;
+              historyContainer.appendChild(historyItem);
+            });
+        }
+      }
+
+      // 高亮顯示被選中的車站
+      function highlightSelectedStation(selectedStation) {
+        // 先移除所有高亮
+        document.querySelectorAll(".station-item").forEach((item) => {
+          item.classList.remove("highlighted");
+        });
+
+        // 添加高亮到選中的車站
+        document.querySelectorAll(".station-item").forEach((item) => {
+          if (item.textContent === selectedStation) {
+            item.classList.add("highlighted");
+
+            // 如果列表是展開的，滾動到選中的車站
+            if (stationListContainer.classList.contains("show")) {
+              setTimeout(() => {
+                item.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 100);
+            }
+          }
+        });
+      }
+
+      // 生成車站列表
+      function generateStationList() {
+        stationList.innerHTML = "";
+
+        trainStations.forEach((station) => {
+          const stationItem = document.createElement("div");
+          stationItem.className = "station-item";
+          stationItem.textContent = station;
+          stationList.appendChild(stationItem);
+        });
+      }
+
+      // 初始化
+      generateStationList();
+
+      // 事件監聽
+      drawBtn.addEventListener("click", drawRandomStation);
+
+      toggleListBtn.addEventListener("click", () => {
+        stationListContainer.classList.toggle("show");
+        toggleListBtn.textContent = stationListContainer.classList.contains(
+          "show"
+        )
+          ? "隱藏車站列表"
+          : "顯示所有車站列表";
+      });
+    </script>
+  </body>
+</html>
